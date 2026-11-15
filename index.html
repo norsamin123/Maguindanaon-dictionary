@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#245b46">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+
 <title>Maguindanaon Dictionary</title>
 <style>
 :root{--green:#245b46;--green2:#39765c;--cream:#f5f7f2;--ink:#1e2a24;--muted:#68766e;--line:#dce5dd;--white:#fff;--red:#a53b36}
@@ -341,5 +345,16 @@ $("importFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;
 $("resetBtn").onclick=()=>{if(confirm("Ibabalik ang orihinal na listahan? Mawawala sa app ang mga idinagdag o inedit mo. Mag-backup muna kung kailangan.")){entries=initial.slice();save()}};
 render();
 </script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(err => {
+      console.error("Service worker registration failed:", err);
+    });
+  });
+}
+</script>
+
 </body>
 </html>
