@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.uid == "LziTKtJcGcaxKlFURFKVphFjTzp1";
+    }
+
+    match /users/{userId}/dictionary/{docId} {
+      allow read, write: if signedIn()
+        && request.auth.uid == userId;
+    }
+
+    match /sharedDictionary/{entryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+
+      match /ratings/{userId} {
+        allow read: if true;
+        allow create, update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && (
+            !('comment' in request.resource.data)
+            || (
+              request.resource.data.comment is string
+              && request.resource.data.comment.size() <= 500
+            )
+          );
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /contributors/{userId} {
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid == userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /wordSuggestions/{suggestionId} {
+      allow create: if signedIn()
+        && exists(/databases/$(database)/documents/contributors/$(request.auth.uid))
+        && get(/databases/$(database)/documents/contributors/$(request.auth.uid)).data.canSubmit == true
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.createdBy == request.auth.uid);
+
+      allow update, delete: if isAdmin();
+    }
+
+    // User can read/write only their own profile; Admin can view all profiles.
+    match /publicProfiles/{userId} {
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid == userId);
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() <= 400000;
+      allow delete: if isAdmin();
+    }
+  }
+}
