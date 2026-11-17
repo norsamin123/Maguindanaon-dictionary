@@ -4,10 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#245b46">
-
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
-
+<link rel="icon" type="image/png" href="./icon-192.png">
 <title>Maguindanaon Dictionary</title>
 <style>
 :root{--green:#245b46;--green2:#39765c;--cream:#f5f7f2;--ink:#1e2a24;--muted:#68766e;--line:#dce5dd;--white:#fff;--red:#a53b36}
@@ -24,6 +22,7 @@ button{background:var(--green);color:white;border:0;cursor:pointer;font-weight:6
 .entry{display:grid;grid-template-columns:1.1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #edf1ed}
 .entry:first-of-type{border-top:0}.word{font-weight:700}.meaning{color:#47564d;font-size:14px}.actions{display:flex;gap:6px}.small{font-size:12px;padding:6px 9px;border-radius:8px}
 .empty{color:var(--muted);padding:16px;text-align:center}
+#adminPanel h3{font-size:15px;color:var(--green);margin:18px 0 8px}.entry{border-top:1px solid #edf1ed}.entry .actions:empty{display:none}
 form{display:grid;grid-template-columns:1fr 1fr;gap:10px}form label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:5px}form .wide{grid-column:1/-1}
 .note{font-size:13px;color:var(--muted);line-height:1.5}.pending{border-left:4px solid #d5a342;padding-left:12px;margin:8px 0;font-size:14px}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
@@ -36,9 +35,31 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
   <div class="toolbar">
     <input id="search" type="search" placeholder="Maghanap ng salita o kahulugan…">
     <select id="lessonFilter"><option value="all">Lahat ng lesson</option></select>
-    <button id="showAdd">+ Magdagdag</button>
+    <button id="showAdd" hidden>+ Magdagdag</button>
   </div>
   <div class="stats"><div class="stat"><strong id="count">0</strong> salita</div><div class="stat"><strong id="lessonCount">0</strong> lesson / grupo</div></div>
+
+  <section class="card" id="accountCard">
+    <h2>Account</h2>
+    <p class="note" id="accountStatus">Puwedeng magbasa ng dictionary nang walang account. Mag-sign in para makapag-rate o makapagsumite ng salita.</p>
+    <form id="authForm">
+      <label>Email<input id="cloudEmail" type="email" autocomplete="username" required placeholder="Email account"></label>
+      <label>Password<input id="cloudPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Password"></label>
+      <div class="wide" style="display:flex;gap:8px;flex-wrap:wrap"><button type="submit">Mag-sign in</button><button type="button" class="secondary" id="registerBtn">Gumawa ng account</button><button type="button" class="secondary" id="logoutBtn" hidden>Mag-sign out</button></div>
+    </form>
+  </section>
+
+  <section class="card" id="adminPanel" hidden>
+    <h2>Administrator Panel</h2>
+    <p class="note">Admin lamang ang maaaring mag-edit, mag-delete, mag-backup, mag-restore, at magbigay ng contributor permission.</p>
+    <h3>Bigyan ng permission ang contributor</h3>
+    <div class="toolbar"><input id="contributorUid" placeholder="Ilagay ang User UID"><button id="grantContributor">Bigyan ng permission</button><button class="secondary" id="revokeContributor">Alisin ang permission</button></div>
+    <div id="contributorStatus" class="note"></div>
+    <h3>Mga salitang naghihintay ng approval</h3>
+    <div id="suggestionsList" class="note">Wala pang submission.</div>
+    <h3>Backup at pagpapanumbalik</h3>
+    <div class="toolbar"><button id="exportBtn">I-download ang backup</button><label class="secondary" style="display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:11px;font-size:14px;color:var(--green);border:1px solid var(--line);background:white">Ibalik ang backup <input id="importFile" type="file" accept=".json,application/json" style="max-width:180px;padding:0;border:0"></label></div>
+  </section>
 
   <section class="card" id="addCard" hidden>
     <h2 id="formTitle">Magdagdag ng salita</h2>
@@ -60,62 +81,52 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
     <div class="pending"><strong>Prutas</strong> — Fruit <span class="note">(hindi pa naibibigay ang Maguindanaon)</span></div>
   </section>
 
-  <section class="card" id="cloudCard">
-    <h2>☁️ Cloud Sync — ikonekta ang iyong dictionary</h2>
-    <p class="note">Para makita ang parehong mga salita sa iba’t ibang device, ikonekta ang app sa sarili mong Firebase project. Gamitin ang iisang account sa bawat device. Huwag ipadala sa chat ang password mo.</p>
-    <div class="toolbar"><span id="cloudStatus" class="stat">Hindi pa nakakonekta</span><button class="secondary" id="showFirebaseSetup">Setup guide</button></div>
-    <div id="cloudForm">
-      <p class="note"><strong>Firebase web config</strong> (mula sa Firebase Console → Project settings → Your apps). Ilalagay ito sa app na ito; hindi ito password.</p>
-      <form id="configForm">
-        <label>API Key<input id="fbApiKey" required placeholder="AIza…" value="AIzaSyBzt9CImMe28Zgv5Auid3icWV-3yThOHAM"></label>
-        <label>Auth Domain<input id="fbAuthDomain" required placeholder="your-project.firebaseapp.com" value="maguindanon-dictionary.firebaseapp.com"></label>
-        <label>Project ID<input id="fbProjectId" required placeholder="your-project-id" value="maguindanon-dictionary"></label>
-        <label>App ID<input id="fbAppId" required placeholder="1:…:web:…" value="1:446916671640:web:8361eb66fe23e30d8978ed"></label>
-        <label class="wide">Storage Bucket (opsyonal)<input id="fbStorageBucket" placeholder="your-project.appspot.com" value="maguindanon-dictionary.firebasestorage.app"></label>
-        <div class="wide"><button type="submit">I-save ang Firebase config</button></div>
-      </form>
-      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-      <form id="authForm">
-        <label>Email<input id="cloudEmail" type="email" autocomplete="username" required placeholder="Email account"></label>
-        <label>Password<input id="cloudPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Password"></label>
-        <div class="wide" style="display:flex;gap:8px;flex-wrap:wrap"><button type="submit" id="loginBtn">Mag-sign in</button><button type="button" class="secondary" id="registerBtn">Gumawa ng account</button><button type="button" class="secondary" id="syncBtn">Sync ngayon</button><button type="button" class="danger" id="logoutBtn">Mag-sign out</button></div>
-      </form>
-    </div>
-    <p class="note" id="cloudHelp">Hindi pa naka-set up ang cloud. Maaari pa ring gamitin ang app offline at mag-backup ng JSON file.</p>
-  </section>
-
-  <section class="card">
-    <h2>Backup at pagpapanumbalik</h2>
-    <p class="note">Awtomatikong sine-save ang mga pagbabago sa browser na ito. Mag-download ng backup paminsan-minsan para may kopya ka kung magpalit ng cellphone o browser.</p>
-    <div class="toolbar" style="margin:0">
-      <button id="exportBtn">I-download ang backup</button>
-      <label class="secondary" style="display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:11px;font-size:14px;color:var(--green);border:1px solid var(--line);background:white">Ibalik ang backup <input id="importFile" type="file" accept=".json,application/json" style="max-width:180px;padding:0;border:0"></label>
-      <button class="secondary" id="resetBtn">Ibalik ang orihinal na listahan</button>
-    </div>
-  </section>
-  <footer>Ang mga salitang nakatala ay mula sa mga aral na ibinahagi ng guro. Panatilihin ang orihinal na baybay.</footer>
+  <footer><strong>About this App</strong><br>Maguindanaon Dictionary<br>Developed and Managed by: <strong>Norsamin Landasan</strong><br>Ang mga salitang nakatala ay mula sa mga aral na ibinahagi ng guro. Panatilihin ang orihinal na baybay.</footer>
 </main>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-let fbApp=null, fbAuth=null, fbDb=null, cloudUser=null, cloudReady=false, cloudBusy=false;
-const CONFIG_KEY="maguindanaon_firebase_config_v1";
-function setCloudStatus(message){const el=document.getElementById("cloudStatus");if(el)el.textContent=message;}
-function readConfig(){try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||"null")}catch{return null}}
-function setupFirebase(config){fbApp=initializeApp(config);fbAuth=getAuth(fbApp);fbDb=getFirestore(fbApp);cloudReady=true;onAuthStateChanged(fbAuth, async user=>{const changed=!!user&&(!cloudUser||cloudUser.uid!==user.uid);cloudUser=user;setCloudStatus(user?`Naka-sign in: ${user.email}`:"Firebase ready — mag-sign in");document.getElementById("cloudHelp").textContent=user?"Naka-link na ang account. Ang mga pagbabago ay isi-sync sa cloud.":"Mag-sign in o gumawa ng account para magamit ang cloud sync.";if(changed)await syncCloud();});}
-async function syncCloud(){if(!cloudReady||!cloudUser){setCloudStatus("I-set up muna at mag-sign in");return;}if(cloudBusy)return;cloudBusy=true;setCloudStatus("Nagsi-sync…");try{const ref=doc(fbDb,"users",cloudUser.uid,"dictionary","main");const snap=await getDoc(ref);if(snap.exists()&&Array.isArray(snap.data().entries)){const cloudEntries=snap.data().entries;const merged=new Map(entries.map(x=>[String(x.id),x]));for(const item of cloudEntries)merged.set(String(item.id),item);entries=[...merged.values()];localStorage.setItem(KEY,JSON.stringify(entries));render();await setDoc(ref,{entries,updatedAt:serverTimestamp()});setCloudStatus("Na-sync ang lokal at cloud na listahan ✓");}else{await setDoc(ref,{entries,updatedAt:serverTimestamp()});setCloudStatus("Na-upload ang dictionary ✓");}}catch(e){console.error(e);setCloudStatus("Sync error — tingnan ang Firebase setup");document.getElementById("cloudHelp").textContent=e.message;}finally{cloudBusy=false;}}
-async function pushCloud(){if(!cloudReady||!cloudUser||cloudBusy)return;cloudBusy=true;try{const ref=doc(fbDb,"users",cloudUser.uid,"dictionary","main");await setDoc(ref,{entries,updatedAt:serverTimestamp()});setCloudStatus("Naka-save sa device at cloud ✓");}catch(e){console.error(e);setCloudStatus("Naka-save sa device; cloud sync failed");}finally{cloudBusy=false;}}
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, writeBatch, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const ADMIN_UID="LziTKtJcGcaxKlFURFKVphFjTzp1";
 const DEFAULT_FIREBASE_CONFIG={apiKey:"AIzaSyBzt9CImMe28Zgv5Auid3icWV-3yThOHAM",authDomain:"maguindanon-dictionary.firebaseapp.com",projectId:"maguindanon-dictionary",storageBucket:"maguindanon-dictionary.firebasestorage.app",appId:"1:446916671640:web:8361eb66fe23e30d8978ed"};
-const savedConfig=readConfig()||DEFAULT_FIREBASE_CONFIG;
-try{localStorage.setItem(CONFIG_KEY,JSON.stringify(savedConfig));setupFirebase(savedConfig);}catch(e){console.error(e);setCloudStatus("Firebase setup error: "+e.message);}
-document.getElementById("configForm").addEventListener("submit",e=>{e.preventDefault();const cfg={apiKey:document.getElementById("fbApiKey").value.trim(),authDomain:document.getElementById("fbAuthDomain").value.trim(),projectId:document.getElementById("fbProjectId").value.trim(),appId:document.getElementById("fbAppId").value.trim(),storageBucket:document.getElementById("fbStorageBucket").value.trim()||undefined};try{localStorage.setItem(CONFIG_KEY,JSON.stringify(cfg));setupFirebase(cfg);setCloudStatus("Firebase config saved — mag-sign in");}catch(err){setCloudStatus("Config error: "+err.message);}});
-document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();if(!fbAuth){alert("Ilagay at i-save muna ang Firebase config.");return;}try{await signInWithEmailAndPassword(fbAuth,document.getElementById("cloudEmail").value.trim(),document.getElementById("cloudPassword").value);await syncCloud();}catch(err){alert("Hindi makapag-sign in: "+err.message);}});
-document.getElementById("registerBtn").addEventListener("click",async()=>{if(!fbAuth){alert("Ilagay at i-save muna ang Firebase config.");return;}try{await createUserWithEmailAndPassword(fbAuth,document.getElementById("cloudEmail").value.trim(),document.getElementById("cloudPassword").value);await syncCloud();}catch(err){alert("Hindi makagawa ng account: "+err.message);}});
-document.getElementById("syncBtn").addEventListener("click",syncCloud);
-document.getElementById("logoutBtn").addEventListener("click",async()=>{if(fbAuth&&cloudUser)await signOut(fbAuth);});
-document.getElementById("showFirebaseSetup").addEventListener("click",()=>alert("Tingnan ang kasamang README_SETUP_FIL.txt para sa sunod-sunod na Firebase setup at Firestore rules."));
-
+let fbApp=null,fbAuth=null,fbDb=null,cloudUser=null,isAdmin=false,isContributor=false,entries=[],sharedReady=false,sharedUnsub=null,suggestionUnsub=null;
+const CONFIG_KEY="maguindanaon_firebase_config_v1",KEY="maguindanaon_dictionary_v1";
+const $=id=>document.getElementById(id);
+function esc(s){return String(s??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}
+function setStatus(t){$("accountStatus").textContent=t;}
+function localSave(){localStorage.setItem(KEY,JSON.stringify(entries));render();}
+function lessons(){return [...new Set(entries.map(e=>e.lesson))]}
+function setupFilters(){const f=$("lessonFilter"),old=f.value;f.innerHTML='<option value="all">Lahat ng lesson</option>'+lessons().map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');if([...f.options].some(o=>o.value===old))f.value=old;const sel=$("lesson"),val=sel.value;sel.innerHTML=lessons().map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')+'<option value="__new">+ Bagong grupo</option>';if([...sel.options].some(o=>o.value===val))sel.value=val;}
+function updateRoleUI(){ $("showAdd").hidden=!(isAdmin||isContributor);$("adminPanel").hidden=!isAdmin;$("logoutBtn").hidden=!cloudUser;$("authForm").hidden=!!cloudUser; if(isAdmin)setStatus("Naka-sign in bilang ADMINISTRATOR. UID: "+cloudUser.uid);else if(cloudUser)setStatus(isContributor?"Naka-sign in. May permission kayong magsumite ng salita.":"Naka-sign in. Maaari na kayong mag-rate at magkomento."); }
+async function migrateLegacyIfNeeded(){if(!isAdmin)return;const shared=await getDocs(collection(fbDb,"sharedDictionary"));if(!shared.empty)return;const old=await getDoc(doc(fbDb,"users",cloudUser.uid,"dictionary","main"));const legacy=old.exists()&&Array.isArray(old.data().entries)?old.data().entries:[];const combined=new Map();for(const e of [...initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]})),...entries,...legacy]){if(e&&e.native&&e.filipino&&e.lesson)combined.set(String(e.id??(Date.now()+Math.random())),e);}const vals=[...combined.values()];for(let i=0;i<vals.length;i+=450){const batch=writeBatch(fbDb);for(const e of vals.slice(i,i+450))batch.set(doc(fbDb,"sharedDictionary",String(e.id)),{...e,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await batch.commit();}setStatus("Nailipat ang dating mga salita sa shared dictionary. Hindi binura ang lumang personal backup.");}
+function startSharedListener(){if(sharedUnsub)sharedUnsub();sharedUnsub=onSnapshot(collection(fbDb,"sharedDictionary"),snap=>{if(!snap.empty){entries=snap.docs.map(d=>({id:d.id,...d.data()}));sharedReady=true;localSave();}else if(!sharedReady){entries=initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));render();}},err=>{console.error(err);setStatus("Hindi mabasa ang shared dictionary: "+err.message);});}
+function startSuggestions(){if(suggestionUnsub)suggestionUnsub();if(!isAdmin)return;suggestionUnsub=onSnapshot(collection(fbDb,"wordSuggestions"),snap=>{const docs=snap.docs;$("suggestionsList").innerHTML=docs.length?docs.map(d=>{const x=d.data();return `<div class="card"><strong>${esc(x.native)}</strong> — ${esc(x.filipino)} <span class="note">(${esc(x.english||"")})</span><br><span class="note">${esc(x.lesson)} • mula sa UID ${esc(x.createdBy)}</span><div class="toolbar"><button class="small" onclick="approveSuggestion('${d.id}')">Approve</button><button class="small danger" onclick="rejectSuggestion('${d.id}')">Reject</button></div></div>`}).join(""):'Wala pang submission.';});}
+async function initUser(user){cloudUser=user;isAdmin=!!user&&user.uid===ADMIN_UID;isContributor=false;if(user&&!isAdmin){try{const c=await getDoc(doc(fbDb,"contributors",user.uid));isContributor=c.exists()&&c.data().canSubmit===true;}catch(e){console.warn(e);}}updateRoleUI();if(user){if(isAdmin){try{await migrateLegacyIfNeeded();}catch(e){console.error(e);setStatus("Hindi naisagawa ang paglilipat: "+e.message);}}startSuggestions();}else{if(suggestionUnsub)suggestionUnsub();suggestionUnsub=null;}startSharedListener();}
+function initFirebase(){fbApp=initializeApp(DEFAULT_FIREBASE_CONFIG);fbAuth=getAuth(fbApp);fbDb=getFirestore(fbApp);startSharedListener();onAuthStateChanged(fbAuth,initUser);}
+try{initFirebase();}catch(e){console.error(e);setStatus("Firebase error: "+e.message);}
+$("authForm").addEventListener("submit",async e=>{e.preventDefault();try{await signInWithEmailAndPassword(fbAuth,$("cloudEmail").value.trim(),$("cloudPassword").value);}catch(err){alert("Hindi makapag-sign in: "+err.message);}});
+$("registerBtn").onclick=async()=>{try{await createUserWithEmailAndPassword(fbAuth,$("cloudEmail").value.trim(),$("cloudPassword").value);}catch(err){alert("Hindi makagawa ng account: "+err.message);}};
+$("logoutBtn").onclick=()=>signOut(fbAuth);
+async function writeShared(entry){await setDoc(doc(fbDb,"sharedDictionary",String(entry.id)),{...entry,updatedAt:serverTimestamp()},{merge:true});}
+window.approveSuggestion=async id=>{if(!isAdmin)return;try{const ref=doc(fbDb,"wordSuggestions",id),snap=await getDoc(ref);if(!snap.exists())return;const x=snap.data();const entry={id:Date.now(),lesson:x.lesson,native:x.native,filipino:x.filipino,english:x.english||""};await writeShared(entry);await deleteDoc(ref);}catch(e){alert("Hindi na-approve: "+e.message);}};
+window.rejectSuggestion=async id=>{if(!isAdmin)return;if(confirm("Burahin ang submission na ito?"))await deleteDoc(doc(fbDb,"wordSuggestions",id));};
+$("grantContributor").onclick=async()=>{if(!isAdmin)return;const uid=$("contributorUid").value.trim();if(!uid)return alert("Ilagay muna ang User UID.");try{await setDoc(doc(fbDb,"contributors",uid),{canSubmit:true,grantedAt:serverTimestamp()});$("contributorStatus").textContent="Na-grant ang contributor permission.";$("contributorUid").value="";}catch(e){alert("Hindi na-grant: "+e.message);}};
+$("revokeContributor").onclick=async()=>{if(!isAdmin)return;const uid=$("contributorUid").value.trim();if(!uid)return alert("Ilagay ang UID na aalisan ng permission.");try{await deleteDoc(doc(fbDb,"contributors",uid));$("contributorStatus").textContent="Inalis na ang contributor permission.";$("contributorUid").value="";}catch(e){alert("Hindi naalis: "+e.message);}};
+async function rateEntry(id){if(!cloudUser)return alert("Mag-sign in muna para makapag-rate.");const rating=Number(document.getElementById("rating-"+id).value),comment=document.getElementById("comment-"+id).value.trim();if(!rating)return alert("Pumili muna ng star rating.");try{await setDoc(doc(fbDb,"sharedDictionary",String(id),"ratings",cloudUser.uid),{rating,comment,createdAt:serverTimestamp()},{merge:true});alert("Salamat sa inyong rating at komento!");document.getElementById("comment-"+id).value="";showReviews(id);}catch(e){alert("Hindi naisumite ang rating: "+e.message);}}
+window.rateEntry=rateEntry;
+async function showReviews(id){try{const snap=await getDocs(collection(fbDb,"sharedDictionary",String(id),"ratings"));let total=0;const rows=[];snap.forEach(d=>{const x=d.data();total+=Number(x.rating)||0;rows.push(`<div class="pending"><strong>${Number(x.rating)||0}/5 stars</strong>${x.comment?` — ${esc(x.comment)}`:" — Walang komento."}</div>`);});const el=document.getElementById("reviews-"+id);if(el)el.innerHTML=snap.size?`Average: ${(total/snap.size).toFixed(1)} / 5 (${snap.size} ratings)`+rows.join(""):"Wala pang rating o komento.";}catch(e){const el=document.getElementById("reviews-"+id);if(el)el.textContent="Hindi ma-load ang reviews.";}}
+window.showReviews=showReviews;
+function render(){setupFilters();const q=$("search").value.trim().toLowerCase(),filter=$("lessonFilter").value;const filtered=entries.filter(e=>(filter==="all"||e.lesson===filter)&&[e.native,e.filipino,e.english,e.lesson].join(" ").toLowerCase().includes(q));$("count").textContent=entries.length;$("lessonCount").textContent=lessons().length;const groups=lessons().filter(l=>filtered.some(e=>e.lesson===l));$("results").innerHTML=groups.length?groups.map(l=>`<section class="card"><h2>${esc(l)}</h2>${filtered.filter(e=>e.lesson===l).map(e=>`<div class="entry"><div class="word">${esc(e.native)}</div><div class="meaning">${esc(e.filipino)}${e.english?` <span class="note">• ${esc(e.english)}</span>`:""}</div><div class="actions">${isAdmin?`<button class="small secondary" onclick="editEntry('${esc(e.id)}')">Edit</button><button class="small danger" onclick="deleteEntry('${esc(e.id)}')">×</button>`:""}</div></div><div class="toolbar"><select id="rating-${esc(e.id)}"><option value="">Star rating</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select><input id="comment-${esc(e.id)}" placeholder="Komento (opsyonal)"><button class="small" onclick="rateEntry('${esc(e.id)}')">I-submit</button><button class="small secondary" onclick="showReviews('${esc(e.id)}')">Tingnan ang ratings/komento</button></div><div class="note" id="reviews-${esc(e.id)}"></div>`).join("")}</section>`).join(""):'<div class="card empty">Walang nahanap na salita.</div>';}
+function openForm(e){$("addCard").hidden=false;$("formTitle").textContent=e?"I-edit ang salita":(isAdmin?"Magdagdag ng salita":"Magsumite ng salita para sa approval");$("native").value=e?.native||"";$("filipino").value=e?.filipino||"";$("english").value=e?.english||"";$("lesson").value=e?.lesson||lessons()[0]||"";editing=e?.id??null;$("addCard").scrollIntoView({behavior:"smooth",block:"start"});}
+let editing=null;
+window.editEntry=id=>{if(!isAdmin)return;const e=entries.find(x=>String(x.id)===String(id));if(e)openForm(e)};
+window.deleteEntry=async id=>{if(!isAdmin)return;if(confirm("Burahin ang salitang ito sa shared dictionary?")){try{await deleteDoc(doc(fbDb,"sharedDictionary",String(id)));}catch(e){alert("Hindi nabura: "+e.message);}}};
+$("showAdd").onclick=()=>openForm(null);$("cancel").onclick=()=>{$("addCard").hidden=true;editing=null;};$("search").oninput=render;$("lessonFilter").onchange=render;
+$("lesson").onchange=()=>{if($("lesson").value==="__new"){const name=prompt("Pangalan ng bagong lesson o grupo:");if(name){const opt=document.createElement("option");opt.textContent=name;opt.value=name;$("lesson").insertBefore(opt,$("lesson").lastElementChild);$("lesson").value=name;}else $("lesson").value=lessons()[0]||"";}};
+$("entryForm").onsubmit=async e=>{e.preventDefault();const lesson=$("lesson").value;if(lesson==="__new")return;const obj={id:editing??Date.now(),lesson,native:$("native").value.trim(),filipino:$("filipino").value.trim(),english:$("english").value.trim()};try{if(isAdmin){await writeShared(obj);}else if(isContributor&&cloudUser){await setDoc(doc(collection(fbDb,"wordSuggestions")),{...obj,createdBy:cloudUser.uid,createdAt:serverTimestamp()});alert("Naipasa na ang salita. Hihintayin ang approval ng admin.");}else{alert("Kailangan ng admin permission para magsumite ng salita.");return;}$("addCard").hidden=true;editing=null;$("entryForm").reset();}catch(err){alert("Hindi na-save: "+err.message);}};
+$("exportBtn").onclick=async()=>{if(!isAdmin)return;const blob=new Blob([JSON.stringify(entries,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="maguindanaon-dictionary-backup.json";a.click();URL.revokeObjectURL(a.href);};
+$("importFile").onchange=async e=>{if(!isAdmin){e.target.value="";return;}const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data)||!data.every(x=>x.native&&x.filipino&&x.lesson))throw Error();if(confirm("Idagdag/ia-update ang mga salitang nasa backup sa shared dictionary?")){for(let i=0;i<data.length;i+=400){const batch=writeBatch(fbDb);for(const item of data.slice(i,i+400)){const id=String(item.id??Date.now()+i);batch.set(doc(fbDb,"sharedDictionary",id),{...item,id,updatedAt:serverTimestamp()},{merge:true});}await batch.commit();}alert("Na-restore ang backup sa shared dictionary.");}}catch(err){alert("Hindi maibalik ang backup: "+err.message);}e.target.value="";};
+$("showAdd").hidden=true;
 const initial = [
 ["Mga naunang salita (Lessons 1–4)","Uway","Oo","Yes"],
 ["Mga naunang salita (Lessons 1–4)","Dikena","Hindi","No"],
@@ -302,59 +313,12 @@ const initial = [
 ["Lesson 13: Damit","Tendung","Belo / Hijab","Headscarf / Hijab"]
 ].map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));
 
-const KEY="maguindanaon_dictionary_v1";
-let entries=load(), editing=null;
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return Array.isArray(v)?v:initial.slice()}catch(e){return initial.slice()}}
-function save(){localStorage.setItem(KEY,JSON.stringify(entries));render();pushCloud()}
-const $=id=>document.getElementById(id);
-function lessons(){return [...new Set(entries.map(e=>e.lesson))]}
-function setupFilters(){
-  const f=$("lessonFilter"), old=f.value;
-  f.innerHTML='<option value="all">Lahat ng lesson</option>'+lessons().map(l=>`<option>${esc(l)}</option>`).join('');
-  if([...f.options].some(o=>o.value===old))f.value=old;
-  const s=$("lesson"), val=s.value;
-  s.innerHTML=lessons().map(l=>`<option>${esc(l)}</option>`).join('')+'<option value="__new">+ Bagong grupo</option>';
-  if([...s.options].some(o=>o.value===val))s.value=val;
-}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function render(){
- setupFilters(); const q=$("search").value.trim().toLowerCase(), filter=$("lessonFilter").value;
- const filtered=entries.filter(e=>(filter==="all"||e.lesson===filter)&&[e.native,e.filipino,e.english,e.lesson].join(" ").toLowerCase().includes(q));
- $("count").textContent=entries.length;$("lessonCount").textContent=lessons().length;
- const groups=lessons().filter(l=>filtered.some(e=>e.lesson===l));
- $("results").innerHTML=groups.length?groups.map(l=>`<section class="card"><h2>${esc(l)}</h2>${filtered.filter(e=>e.lesson===l).map(e=>`<div class="entry"><div class="word">${esc(e.native)}</div><div class="meaning">${esc(e.filipino)}${e.english?` <span class="note">• ${esc(e.english)}</span>`:""}</div><div class="actions"><button class="small secondary" onclick="editEntry(${e.id})">Edit</button><button class="small danger" onclick="deleteEntry(${e.id})">×</button></div></div>`).join("")}</section>`).join(""):'<div class="card empty">Walang nahanap na salita.</div>';
-}
-function openForm(e){
- $("addCard").hidden=false;$("formTitle").textContent=e?"I-edit ang salita":"Magdagdag ng salita";
- $("native").value=e?.native||"";$("filipino").value=e?.filipino||"";$("english").value=e?.english||"";
- $("lesson").value=e?.lesson||lessons()[0]||"";
- editing=e?.id??null; $("addCard").scrollIntoView({behavior:"smooth",block:"start"});
-}
-window.editEntry=id=>{const e=entries.find(x=>x.id===id);if(e)openForm(e)};
-window.deleteEntry=id=>{if(confirm("Burahin ang salitang ito?")){entries=entries.filter(e=>e.id!==id);save()}};
-$("showAdd").onclick=()=>openForm(null);$("cancel").onclick=()=>{$("addCard").hidden=true;editing=null};
-$("search").oninput=render;$("lessonFilter").onchange=render;
-$("lesson").onchange=()=>{if($("lesson").value==="__new"){const name=prompt("Pangalan ng bagong lesson o grupo:");if(name){const opt=document.createElement("option");opt.textContent=name;opt.value=name;$("lesson").insertBefore(opt,$("lesson").lastElementChild);$("lesson").value=name}else $("lesson").value=lessons()[0]||""}};
-$("entryForm").onsubmit=e=>{e.preventDefault();let lesson=$("lesson").value;if(lesson==="__new")return;
- const obj={id:editing??(Date.now()*1000+Math.floor(Math.random()*1000)),lesson,native:$("native").value.trim(),filipino:$("filipino").value.trim(),english:$("english").value.trim()};
- if(editing!==null)entries=entries.map(x=>x.id===editing?obj:x);else entries.push(obj);
- save();$("addCard").hidden=true;editing=null;$("entryForm").reset();
-};
-$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(entries,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="maguindanaon-dictionary-backup.json";a.click();URL.revokeObjectURL(a.href)};
-$("importFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data)||!data.every(x=>x.native&&x.filipino&&x.lesson))throw Error();if(confirm("Papaltan ang kasalukuyang listahan ng laman ng backup?")){entries=data;save();alert("Naibalik na ang backup.")}}catch(err){alert("Hindi mabasa ang backup file.")}e.target.value=""};
-$("resetBtn").onclick=()=>{if(confirm("Ibabalik ang orihinal na listahan? Mawawala sa app ang mga idinagdag o inedit mo. Mag-backup muna kung kailangan.")){entries=initial.slice();save()}};
+const initialEntries=initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));
+entries=initialEntries.slice();
+function bootLocal(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(Array.isArray(v)&&v.length)entries=v;}catch(e){}}
+bootLocal();
 render();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("SW registration failed",e)));}
 </script>
-
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(err => {
-      console.error("Service worker registration failed:", err);
-    });
-  });
-}
-</script>
-
 </body>
 </html>
