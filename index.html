@@ -18,7 +18,7 @@ input,select{background:white;color:var(--ink)}#search{flex:1;min-width:190px}
 button{background:var(--green);color:white;border:0;cursor:pointer;font-weight:600}button.secondary{background:white;color:var(--green);border:1px solid var(--line)}button.danger{background:var(--red)}
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px}.stat{background:white;border:1px solid var(--line);padding:10px 14px;border-radius:12px;font-size:13px;color:var(--muted)}.stat strong{color:var(--green);font-size:17px;margin-right:5px}
 .card{background:white;border:1px solid var(--line);border-radius:15px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #1b4a3510}
-.card h2{font-size:18px;margin:0 0 12px;color:var(--green)}.lesson-card{border-top:5px solid var(--green2)}.lesson-card h2{background:#edf5ef;border-radius:9px;padding:10px 12px}.lesson-card h2 .lesson-tag{display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:3px 8px;margin-right:7px;font-size:12px}.lesson-card:nth-child(2n){border-top-color:#c49a45}.lesson-card:nth-child(2n) h2 .lesson-tag{background:#8b6824}
+.card h2{font-size:18px;margin:0 0 12px;color:var(--green)}
 .entry{display:grid;grid-template-columns:1.1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #edf1ed}
 .entry:first-of-type{border-top:0}.word{font-weight:700}.meaning{color:#47564d;font-size:14px}.actions{display:flex;gap:6px}.small{font-size:12px;padding:6px 9px;border-radius:8px}
 .empty{color:var(--muted);padding:16px;text-align:center}
@@ -55,9 +55,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
     <h3>Bigyan ng permission ang contributor</h3>
     <div class="toolbar"><input id="contributorUid" placeholder="Ilagay ang User UID"><button id="grantContributor">Bigyan ng permission</button><button class="secondary" id="revokeContributor">Alisin ang permission</button></div>
     <div id="contributorStatus" class="note"></div>
-    <h3>Pag-update ng Master Copy</h3>
-    <p class="note">Iu-update ang mga katugmang salita ayon sa Lessons 1–13. Pananatilihin ang kasalukuyang document IDs para manatili ang ratings at reviews. Hindi awtomatikong buburahin ang ibang records.</p>
-    <div class="toolbar"><button id="updateMasterBtn">I-download ang backup at i-update ang Master Copy</button></div>
     <h3>Mga salitang naghihintay ng approval</h3>
     <div id="suggestionsList" class="note">Wala pang submission.</div>
     <h3>Backup at pagpapanumbalik</h3>
@@ -75,22 +72,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
     </form>
   </section>
 
-  <section class="card" id="suggestionCard" hidden>
-    <h2>Suggestion Box</h2>
-    <p class="note">Pumili lamang ng salitang nasa listahan at imungkahi ang katumbas nitong Maguindanaon. Admin lamang ang makapagdaragdag sa opisyal na dictionary.</p>
-    <form id="suggestionForm">
-      <label class="wide">Salitang babalikan<select id="pendingWord" required><option value="">Pumili ng salita</option><option value="Karne">Karne</option><option value="Prutas">Prutas</option></select></label>
-      <label class="wide">Iminungkahing Maguindanaon<input id="suggestedNative" required maxlength="100" placeholder="Isulat ang katumbas na salita"></label>
-      <div class="wide"><button type="submit">Ipadala ang mungkahi</button></div>
-    </form>
-  </section>
-
   <div id="results"></div>
 
   <section class="card">
     <h2>Mga salitang babalikan</h2>
     <p class="note">Nakatala rito ang mga salitang hindi pa naibibigay ang katumbas sa Datu Piang Maguindanaon.</p>
-    <div id="pendingWordsList"></div>
+    <div class="pending"><strong>Karne</strong> — Meat <span class="note">(hindi pa naibibigay ang Maguindanaon)</span></div>
+    <div class="pending"><strong>Prutas</strong> — Fruit <span class="note">(hindi pa naibibigay ang Maguindanaon)</span></div>
   </section>
 
   <footer><strong>About this App</strong><br>Maguindanaon Dictionary<br>Developed and Managed by: <strong>Norsamin Landasan</strong><br>Ang mga salitang nakatala ay mula sa mga aral na ibinahagi ng guro. Panatilihin ang orihinal na baybay.</footer>
@@ -109,10 +97,10 @@ function setStatus(t){$("accountStatus").textContent=t;}
 function localSave(){localStorage.setItem(KEY,JSON.stringify(entries));render();}
 function lessons(){return [...new Set(entries.map(e=>e.lesson))]}
 function setupFilters(){const f=$("lessonFilter"),old=f.value;f.innerHTML='<option value="all">Lahat ng lesson</option>'+lessons().map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');if([...f.options].some(o=>o.value===old))f.value=old;const sel=$("lesson"),val=sel.value;sel.innerHTML=lessons().map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')+'<option value="__new">+ Bagong grupo</option>';if([...sel.options].some(o=>o.value===val))sel.value=val;}
-function updateRoleUI(){ $("showAdd").hidden=!isAdmin;$("suggestionCard").hidden=!(!!cloudUser&&isContributor&&!isAdmin);$("adminPanel").hidden=!isAdmin;$("logoutBtn").hidden=!cloudUser;$("authForm").hidden=!!cloudUser; if(isAdmin)setStatus("Naka-sign in bilang ADMINISTRATOR. UID: "+cloudUser.uid);else if(cloudUser)setStatus(isContributor?"Naka-sign in. Maaari kayong magmungkahi ng salin para sa Karne o Prutas.":"Naka-sign in. Maaari na kayong mag-rate at magkomento."); }
-async function migrateLegacyIfNeeded(){if(!isAdmin)return;const shared=await getDocs(collection(fbDb,"sharedDictionary"));if(!shared.empty)return;const vals=initial.map(e=>({...e}));for(let i=0;i<vals.length;i+=400){const batch=writeBatch(fbDb);for(const e of vals.slice(i,i+400))batch.set(doc(fbDb,"sharedDictionary",String(e.id)),{...e,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await batch.commit();}setStatus("Naidagdag ang Master Copy sa shared dictionary.");}
+function updateRoleUI(){ $("showAdd").hidden=!(isAdmin||isContributor);$("adminPanel").hidden=!isAdmin;$("logoutBtn").hidden=!cloudUser;$("authForm").hidden=!!cloudUser; if(isAdmin)setStatus("Naka-sign in bilang ADMINISTRATOR. UID: "+cloudUser.uid);else if(cloudUser)setStatus(isContributor?"Naka-sign in. May permission kayong magsumite ng salita.":"Naka-sign in. Maaari na kayong mag-rate at magkomento."); }
+async function migrateLegacyIfNeeded(){if(!isAdmin)return;const shared=await getDocs(collection(fbDb,"sharedDictionary"));if(!shared.empty)return;const old=await getDoc(doc(fbDb,"users",cloudUser.uid,"dictionary","main"));const legacy=old.exists()&&Array.isArray(old.data().entries)?old.data().entries:[];const combined=new Map();for(const e of [...initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]})),...entries,...legacy]){if(e&&e.native&&e.filipino&&e.lesson)combined.set(String(e.id??(Date.now()+Math.random())),e);}const vals=[...combined.values()];for(let i=0;i<vals.length;i+=450){const batch=writeBatch(fbDb);for(const e of vals.slice(i,i+450))batch.set(doc(fbDb,"sharedDictionary",String(e.id)),{...e,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await batch.commit();}setStatus("Nailipat ang dating mga salita sa shared dictionary. Hindi binura ang lumang personal backup.");}
 function startSharedListener(){if(sharedUnsub)sharedUnsub();sharedUnsub=onSnapshot(collection(fbDb,"sharedDictionary"),snap=>{if(!snap.empty){entries=snap.docs.map(d=>({id:d.id,...d.data()}));sharedReady=true;localSave();}else if(!sharedReady){entries=initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));render();}},err=>{console.error(err);setStatus("Hindi mabasa ang shared dictionary: "+err.message);});}
-function startSuggestions(){if(suggestionUnsub)suggestionUnsub();if(!isAdmin)return;suggestionUnsub=onSnapshot(collection(fbDb,"wordSuggestions"),snap=>{const docs=snap.docs;$("suggestionsList").innerHTML=docs.length?docs.map(d=>{const x=d.data();return `<div class="card"><strong>${esc(x.pendingWord||x.filipino||"Lumang submission")}</strong> → ${esc(x.native||"(walang mungkahi)")}<br><span class="note">Mula sa UID ${esc(x.createdBy)}</span><div class="toolbar"><button class="small" onclick="approveSuggestion('${d.id}')">Approve</button><button class="small danger" onclick="rejectSuggestion('${d.id}')">Reject</button></div></div>`}).join(""):'Wala pang submission.';});}
+function startSuggestions(){if(suggestionUnsub)suggestionUnsub();if(!isAdmin)return;suggestionUnsub=onSnapshot(collection(fbDb,"wordSuggestions"),snap=>{const docs=snap.docs;$("suggestionsList").innerHTML=docs.length?docs.map(d=>{const x=d.data();return `<div class="card"><strong>${esc(x.native)}</strong> — ${esc(x.filipino)} <span class="note">(${esc(x.english||"")})</span><br><span class="note">${esc(x.lesson)} • mula sa UID ${esc(x.createdBy)}</span><div class="toolbar"><button class="small" onclick="approveSuggestion('${d.id}')">Approve</button><button class="small danger" onclick="rejectSuggestion('${d.id}')">Reject</button></div></div>`}).join(""):'Wala pang submission.';});}
 async function initUser(user){cloudUser=user;isAdmin=!!user&&user.uid===ADMIN_UID;isContributor=false;if(user&&!isAdmin){try{const c=await getDoc(doc(fbDb,"contributors",user.uid));isContributor=c.exists()&&c.data().canSubmit===true;}catch(e){console.warn(e);}}updateRoleUI();if(user){if(isAdmin){try{await migrateLegacyIfNeeded();}catch(e){console.error(e);setStatus("Hindi naisagawa ang paglilipat: "+e.message);}}startSuggestions();}else{if(suggestionUnsub)suggestionUnsub();suggestionUnsub=null;}startSharedListener();}
 function initFirebase(){fbApp=initializeApp(DEFAULT_FIREBASE_CONFIG);fbAuth=getAuth(fbApp);fbDb=getFirestore(fbApp);startSharedListener();onAuthStateChanged(fbAuth,initUser);}
 try{initFirebase();}catch(e){console.error(e);setStatus("Firebase error: "+e.message);}
@@ -120,7 +108,7 @@ $("authForm").addEventListener("submit",async e=>{e.preventDefault();try{await s
 $("registerBtn").onclick=async()=>{try{await createUserWithEmailAndPassword(fbAuth,$("cloudEmail").value.trim(),$("cloudPassword").value);}catch(err){alert("Hindi makagawa ng account: "+err.message);}};
 $("logoutBtn").onclick=()=>signOut(fbAuth);
 async function writeShared(entry){await setDoc(doc(fbDb,"sharedDictionary",String(entry.id)),{...entry,updatedAt:serverTimestamp()},{merge:true});}
-window.approveSuggestion=async id=>{if(!isAdmin)return;try{const ref=doc(fbDb,"wordSuggestions",id),snap=await getDoc(ref);if(!snap.exists())return;const x=snap.data();if(!["Karne","Prutas"].includes(x.pendingWord)||!x.native)throw new Error("Hindi valid ang mungkahi.");const targetId="pending_"+x.pendingWord.toLowerCase();if((await getDoc(doc(fbDb,"sharedDictionary",targetId))).exists())throw new Error("May naaprubahan nang salin para sa salitang ito.");const entry={id:targetId,lesson:"Lesson 7: Food and Drinks",native:x.native,filipino:x.pendingWord,english:""};await writeShared(entry);await deleteDoc(ref);}catch(e){alert("Hindi na-approve: "+e.message);}};
+window.approveSuggestion=async id=>{if(!isAdmin)return;try{const ref=doc(fbDb,"wordSuggestions",id),snap=await getDoc(ref);if(!snap.exists())return;const x=snap.data();const entry={id:Date.now(),lesson:x.lesson,native:x.native,filipino:x.filipino,english:x.english||""};await writeShared(entry);await deleteDoc(ref);}catch(e){alert("Hindi na-approve: "+e.message);}};
 window.rejectSuggestion=async id=>{if(!isAdmin)return;if(confirm("Burahin ang submission na ito?"))await deleteDoc(doc(fbDb,"wordSuggestions",id));};
 $("grantContributor").onclick=async()=>{if(!isAdmin)return;const uid=$("contributorUid").value.trim();if(!uid)return alert("Ilagay muna ang User UID.");try{await setDoc(doc(fbDb,"contributors",uid),{canSubmit:true,grantedAt:serverTimestamp()});$("contributorStatus").textContent="Na-grant ang contributor permission.";$("contributorUid").value="";}catch(e){alert("Hindi na-grant: "+e.message);}};
 $("revokeContributor").onclick=async()=>{if(!isAdmin)return;const uid=$("contributorUid").value.trim();if(!uid)return alert("Ilagay ang UID na aalisan ng permission.");try{await deleteDoc(doc(fbDb,"contributors",uid));$("contributorStatus").textContent="Inalis na ang contributor permission.";$("contributorUid").value="";}catch(e){alert("Hindi naalis: "+e.message);}};
@@ -128,1446 +116,201 @@ async function rateEntry(id){if(!cloudUser)return alert("Mag-sign in muna para m
 window.rateEntry=rateEntry;
 async function showReviews(id){try{const snap=await getDocs(collection(fbDb,"sharedDictionary",String(id),"ratings"));let total=0;const rows=[];snap.forEach(d=>{const x=d.data();total+=Number(x.rating)||0;rows.push(`<div class="pending"><strong>${Number(x.rating)||0}/5 stars</strong>${x.comment?` — ${esc(x.comment)}`:" — Walang komento."}</div>`);});const el=document.getElementById("reviews-"+id);if(el)el.innerHTML=snap.size?`Average: ${(total/snap.size).toFixed(1)} / 5 (${snap.size} ratings)`+rows.join(""):"Wala pang rating o komento.";}catch(e){const el=document.getElementById("reviews-"+id);if(el)el.textContent="Hindi ma-load ang reviews.";}}
 window.showReviews=showReviews;
-function renderPendingWords(){const words=[{word:"Karne",english:"Meat"},{word:"Prutas",english:"Fruit"}];const list=$("pendingWordsList");if(!list)return;list.innerHTML=words.map(w=>{const approved=entries.find(e=>e.lesson==="Lesson 7: Food and Drinks"&&e.filipino===w.word);return `<div class="pending"><strong>${w.word}</strong> — ${w.english} ${approved?`<span>→ <strong>${esc(approved.native)}</strong> <span class="note">(naidagdag na sa dictionary)</span></span>`:`<span class="note">(hindi pa naibibigay ang Maguindanaon)</span>`}</div>`;}).join("");const select=$("pendingWord");if(select){const available=words.filter(w=>!entries.some(e=>e.lesson==="Lesson 7: Food and Drinks"&&e.filipino===w.word));select.innerHTML='<option value="">Pumili ng salita</option>'+available.map(w=>`<option value="${w.word}">${w.word}</option>`).join("");const submit=$("suggestionForm")?.querySelector('button[type="submit"]');if(submit)submit.disabled=available.length===0;}}
-function render(){renderPendingWords();setupFilters();const q=$("search").value.trim().toLowerCase(),filter=$("lessonFilter").value;const filtered=entries.filter(e=>(filter==="all"||e.lesson===filter)&&[e.native,e.filipino,e.english,e.lesson].join(" ").toLowerCase().includes(q));$("count").textContent=entries.length;$("lessonCount").textContent=lessons().length;const groups=lessons().filter(l=>filtered.some(e=>e.lesson===l));$("results").innerHTML=groups.length?groups.map(l=>`<section class="card lesson-card"><h2><span class="lesson-tag">${esc((l.match(/^Lesson \d+/)||["Lesson"])[0])}</span>${esc(l.replace(/^Lesson \d+:?\s*/,""))}</h2>${filtered.filter(e=>e.lesson===l).map(e=>`<div class="entry"><div class="word">${esc(e.native)}</div><div class="meaning">${esc(e.filipino)}${e.english?` <span class="note">• ${esc(e.english)}</span>`:""}</div><div class="actions">${isAdmin?`<button class="small secondary" onclick="editEntry('${esc(e.id)}')">Edit</button><button class="small danger" onclick="deleteEntry('${esc(e.id)}')">×</button>`:""}</div></div><div class="toolbar"><select id="rating-${esc(e.id)}"><option value="">Star rating</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select><input id="comment-${esc(e.id)}" placeholder="Komento (opsyonal)"><button class="small" onclick="rateEntry('${esc(e.id)}')">I-submit</button><button class="small secondary" onclick="showReviews('${esc(e.id)}')">Tingnan ang ratings/komento</button></div><div class="note" id="reviews-${esc(e.id)}"></div>`).join("")}</section>`).join(""):'<div class="card empty">Walang nahanap na salita.</div>';}
+function render(){setupFilters();const q=$("search").value.trim().toLowerCase(),filter=$("lessonFilter").value;const filtered=entries.filter(e=>(filter==="all"||e.lesson===filter)&&[e.native,e.filipino,e.english,e.lesson].join(" ").toLowerCase().includes(q));$("count").textContent=entries.length;$("lessonCount").textContent=lessons().length;const groups=lessons().filter(l=>filtered.some(e=>e.lesson===l));$("results").innerHTML=groups.length?groups.map(l=>`<section class="card"><h2>${esc(l)}</h2>${filtered.filter(e=>e.lesson===l).map(e=>`<div class="entry"><div class="word">${esc(e.native)}</div><div class="meaning">${esc(e.filipino)}${e.english?` <span class="note">• ${esc(e.english)}</span>`:""}</div><div class="actions">${isAdmin?`<button class="small secondary" onclick="editEntry('${esc(e.id)}')">Edit</button><button class="small danger" onclick="deleteEntry('${esc(e.id)}')">×</button>`:""}</div></div><div class="toolbar"><select id="rating-${esc(e.id)}"><option value="">Star rating</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select><input id="comment-${esc(e.id)}" placeholder="Komento (opsyonal)"><button class="small" onclick="rateEntry('${esc(e.id)}')">I-submit</button><button class="small secondary" onclick="showReviews('${esc(e.id)}')">Tingnan ang ratings/komento</button></div><div class="note" id="reviews-${esc(e.id)}"></div>`).join("")}</section>`).join(""):'<div class="card empty">Walang nahanap na salita.</div>';}
 function openForm(e){$("addCard").hidden=false;$("formTitle").textContent=e?"I-edit ang salita":(isAdmin?"Magdagdag ng salita":"Magsumite ng salita para sa approval");$("native").value=e?.native||"";$("filipino").value=e?.filipino||"";$("english").value=e?.english||"";$("lesson").value=e?.lesson||lessons()[0]||"";editing=e?.id??null;$("addCard").scrollIntoView({behavior:"smooth",block:"start"});}
 let editing=null;
 window.editEntry=id=>{if(!isAdmin)return;const e=entries.find(x=>String(x.id)===String(id));if(e)openForm(e)};
 window.deleteEntry=async id=>{if(!isAdmin)return;if(confirm("Burahin ang salitang ito sa shared dictionary?")){try{await deleteDoc(doc(fbDb,"sharedDictionary",String(id)));}catch(e){alert("Hindi nabura: "+e.message);}}};
 $("showAdd").onclick=()=>openForm(null);$("cancel").onclick=()=>{$("addCard").hidden=true;editing=null;};$("search").oninput=render;$("lessonFilter").onchange=render;
 $("lesson").onchange=()=>{if($("lesson").value==="__new"){const name=prompt("Pangalan ng bagong lesson o grupo:");if(name){const opt=document.createElement("option");opt.textContent=name;opt.value=name;$("lesson").insertBefore(opt,$("lesson").lastElementChild);$("lesson").value=name;}else $("lesson").value=lessons()[0]||"";}};
-$("entryForm").onsubmit=async e=>{e.preventDefault();if(!isAdmin)return alert("Admin lamang ang maaaring mag-edit ng Master Dictionary.");const lesson=$("lesson").value;if(lesson==="__new")return;const obj={id:editing??Date.now(),lesson,native:$("native").value.trim(),filipino:$("filipino").value.trim(),english:$("english").value.trim()};try{await writeShared(obj);$("addCard").hidden=true;editing=null;$("entryForm").reset();}catch(err){alert("Hindi na-save: "+err.message);}};
-$("suggestionForm").onsubmit=async e=>{e.preventDefault();if(!cloudUser||!isContributor||isAdmin)return alert("Wala kayong permission para magsumite.");const pendingWord=$("pendingWord").value,native=$("suggestedNative").value.trim();if(!["Karne","Prutas"].includes(pendingWord)||!native)return alert("Pumili ng nakatalang salita at ilagay ang mungkahing salin.");try{await setDoc(doc(collection(fbDb,"wordSuggestions")),{pendingWord,native,createdBy:cloudUser.uid,createdAt:serverTimestamp()});alert("Naipasa ang mungkahi. Hihintayin ang pagsusuri ng Admin.");$("suggestionForm").reset();}catch(err){alert("Hindi naipasa: "+err.message);}};
+$("entryForm").onsubmit=async e=>{e.preventDefault();const lesson=$("lesson").value;if(lesson==="__new")return;const obj={id:editing??Date.now(),lesson,native:$("native").value.trim(),filipino:$("filipino").value.trim(),english:$("english").value.trim()};try{if(isAdmin){await writeShared(obj);}else if(isContributor&&cloudUser){await setDoc(doc(collection(fbDb,"wordSuggestions")),{...obj,createdBy:cloudUser.uid,createdAt:serverTimestamp()});alert("Naipasa na ang salita. Hihintayin ang approval ng admin.");}else{alert("Kailangan ng admin permission para magsumite ng salita.");return;}$("addCard").hidden=true;editing=null;$("entryForm").reset();}catch(err){alert("Hindi na-save: "+err.message);}};
 $("exportBtn").onclick=async()=>{if(!isAdmin)return;const blob=new Blob([JSON.stringify(entries,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="maguindanaon-dictionary-backup.json";a.click();URL.revokeObjectURL(a.href);};
-
-function downloadCurrentBackup(){const blob=new Blob([JSON.stringify(entries,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="maguindanaon-dictionary-backup-before-master-update.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
-$("updateMasterBtn").onclick=async()=>{if(!isAdmin)return;try{const snap=await getDocs(collection(fbDb,"sharedDictionary"));const existing=snap.docs.map(d=>({docId:d.id,...d.data()}));const used=new Set();const existingIds=new Set(existing.map(e=>e.docId));const norm=v=>String(v??"").trim().toLowerCase().replace(/\s+/g," ");downloadCurrentBackup();if(!confirm("Na-download na ang backup. Itutuloy ang pag-update? Ang katugmang records ay ia-update sa parehong document ID upang mapanatili ang ratings at reviews. Walang existing record na buburahin."))return;for(let i=0;i<initial.length;i+=350){const batch=writeBatch(fbDb);for(const src of initial.slice(i,i+350)){const match=existing.find(e=>!used.has(e.docId)&&norm(e.native)===norm(src.native)&&norm(e.filipino)===norm(src.filipino));let id=match?match.docId:"master_"+(initial.indexOf(src)+1);if(!match&&existingIds.has(id)){id="master_source_"+(initial.indexOf(src)+1);while(existingIds.has(id))id+="_new";}existingIds.add(id);if(match)used.add(match.docId);batch.set(doc(fbDb,"sharedDictionary",id),{...src,id,updatedAt:serverTimestamp()},{merge:true});}await batch.commit();}alert("Na-update ang Master Copy. Hindi binura ang ibang records o ratings/reviews.");}catch(err){alert("Hindi natapos ang update: "+err.message);}};
-
 $("importFile").onchange=async e=>{if(!isAdmin){e.target.value="";return;}const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data)||!data.every(x=>x.native&&x.filipino&&x.lesson))throw Error();if(confirm("Idagdag/ia-update ang mga salitang nasa backup sa shared dictionary?")){for(let i=0;i<data.length;i+=400){const batch=writeBatch(fbDb);for(const item of data.slice(i,i+400)){const id=String(item.id??Date.now()+i);batch.set(doc(fbDb,"sharedDictionary",id),{...item,id,updatedAt:serverTimestamp()},{merge:true});}await batch.commit();}alert("Na-restore ang backup sa shared dictionary.");}}catch(err){alert("Hindi maibalik ang backup: "+err.message);}e.target.value="";};
 $("showAdd").hidden=true;
 const initial = [
-  [
-    "Lesson 1: Basic Words",
-    "Uway",
-    "Oo",
-    ""
-  ],
-  [
-    "Lesson 1: Basic Words",
-    "Madakel",
-    "Marami",
-    ""
-  ],
-  [
-    "Lesson 1: Basic Words",
-    "Paydu / Pedu",
-    "Kaunti",
-    ""
-  ],
-  [
-    "Lesson 2: Basic Descriptions",
-    "Dikena",
-    "Hindi",
-    ""
-  ],
-  [
-    "Lesson 2: Basic Descriptions",
-    "Manisan",
-    "Maganda",
-    ""
-  ],
-  [
-    "Lesson 2: Basic Descriptions",
-    "Pangit",
-    "Pangit",
-    ""
-  ],
-  [
-    "Lesson 2: Basic Descriptions",
-    "Masla",
-    "Malaki",
-    ""
-  ],
-  [
-    "Lesson 2: Basic Descriptions",
-    "Manot",
-    "Maliit",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Gapya e ginawa nin",
-    "Masaya",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Malugkug",
-    "Malungkot",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Galinget",
-    "Galit",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Gagutem",
-    "Gutom",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Nosug",
-    "Busog",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Mapya e palangay nin",
-    "Mabait",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Mategel",
-    "Matalino",
-    ""
-  ],
-  [
-    "Lesson 3: Feelings and Personality",
-    "Galugat",
-    "Pagod",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Malinis",
-    "Malinis",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Malzik",
-    "Marumi",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Malengkas",
-    "Mabilis",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Malumbat",
-    "Mabagal",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Mayaw",
-    "Mainit",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Matenggaw",
-    "Malamig",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Mabagel",
-    "Malakas",
-    ""
-  ],
-  [
-    "Lesson 4: Opposite Words",
-    "Malubay",
-    "Mahina",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Mapita",
-    "Umaga",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Modtu",
-    "Tanghali",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Malulem",
-    "Hapon",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Magabi",
-    "Gabi",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Kagay",
-    "Kahapon",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Saguna",
-    "Ngayon",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Namag",
-    "Bukas",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Amemay / Amay",
-    "Mamaya",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Kagina",
-    "Kanina",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Gay",
-    "Araw",
-    ""
-  ],
-  [
-    "Lesson 5: Time",
-    "Senang",
-    "Araw (sun)",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Ama",
-    "Ama",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Ina",
-    "Ina",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Wata",
-    "Anak",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Kaka babay",
-    "Kuya",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Kaka mama",
-    "Ate",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Kaka",
-    "Tawag sa nakatatandang kapatid",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Ali",
-    "Nakababatang kapatid",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Tuwa mama",
-    "Lolo",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Tuwa babay",
-    "Lola",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Tuwa",
-    "Tawag sa lolo o lola",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Suled",
-    "Kapatid",
-    ""
-  ],
-  [
-    "Lesson 6: Family",
-    "Pamilya",
-    "Pamilya",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Emay / May",
-    "Kanin",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Ig",
-    "Tubig",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Seda",
-    "Isda",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Manuk",
-    "Manok",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Leman",
-    "Itlog",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Kamu",
-    "Gulay",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Gatas",
-    "Gatas",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Pan",
-    "Tinapay",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Timus",
-    "Asin",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Mamis",
-    "Asukal",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Mamis",
-    "Matamis",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Kapi",
-    "Kape",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Saging",
-    "Saging",
-    ""
-  ],
-  [
-    "Lesson 7: Food and Drinks",
-    "Mangga",
-    "Mangga",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Aso",
-    "Aso",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Puting",
-    "Pusa",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Sapi",
-    "Baka",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Kabaw / Kalabaw",
-    "Kalabaw",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Kambing",
-    "Kambing",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Gembut",
-    "Baboy",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Papanuk",
-    "Ibon",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Manuk",
-    "Manok",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Itik",
-    "Pato",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Dumpaw",
-    "Daga",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Nipay",
-    "Ahas",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Ubal",
-    "Unggoy",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Seda",
-    "Isda",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Kabayo",
-    "Kabayo",
-    ""
-  ],
-  [
-    "Lesson 8: Animals",
-    "Bilibili",
-    "Tupa",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Ulo",
-    "Ulo",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Buk",
-    "Buhok",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Mata",
-    "Mata",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Ngilong",
-    "Ilong",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Bibil",
-    "Labi",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Ngali",
-    "Bunganga",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Ngipen",
-    "Ngipin",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Dila",
-    "Dila",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Tangila",
-    "Tainga",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Beneng",
-    "Mukha",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Lima",
-    "Kamay",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Kemel",
-    "Daliri",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Ay",
-    "Paa",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Aleb",
-    "Tuhod",
-    ""
-  ],
-  [
-    "Lesson 9: Body Parts",
-    "Tyan",
-    "Tiyan",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Maliga",
-    "Pula",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Bilu",
-    "Asul",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Binaning",
-    "Dilaw",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Maputi",
-    "Puti",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Metem",
-    "Itim",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Kasumba",
-    "Rosas",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Magaw",
-    "Abo",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Malibuteng",
-    "Madilim",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Malinawag",
-    "Maliwanag",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Gadung",
-    "Berde",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Sikulati",
-    "Kayumanggi",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Lambayung",
-    "Lila",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Bulawan",
-    "Ginto",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Kulit",
-    "Kahel",
-    ""
-  ],
-  [
-    "Lesson 10: Colors",
-    "Pilak",
-    "Pilak",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Isa",
-    "1",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Duwa",
-    "2",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telu",
-    "3",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pat",
-    "4",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Lima",
-    "5",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nem",
-    "6",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitu",
-    "7",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walu",
-    "8",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Silaw",
-    "9",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapu",
-    "10",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu isa",
-    "11",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu dwa",
-    "12",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu telu",
-    "13",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu pat",
-    "14",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu lima",
-    "15",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu nem",
-    "16",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu pitu",
-    "17",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu walu",
-    "18",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Sapunggu siyaw",
-    "19",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulu",
-    "20",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu isa",
-    "21",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu dwa",
-    "22",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu telu",
-    "23",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu pat",
-    "24",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu lima",
-    "25",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu nem",
-    "26",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu pitu",
-    "27",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu walu",
-    "28",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulunggu siyaw",
-    "29",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Dwapulu",
-    "30",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu isa",
-    "31",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu dwa",
-    "32",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu telu",
-    "33",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu pat",
-    "34",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu lima",
-    "35",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu nem",
-    "36",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu pitu",
-    "37",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu walu",
-    "38",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupunggu siyaw",
-    "39",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Telupulu",
-    "40",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu isa",
-    "41",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu dwa",
-    "42",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu telu",
-    "43",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu pat",
-    "44",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu lima",
-    "45",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu nem",
-    "46",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu pitu",
-    "47",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu walu",
-    "48",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulunggu siyaw",
-    "49",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulu",
-    "50",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu isa",
-    "51",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu dwa",
-    "52",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu telu",
-    "53",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu pat",
-    "54",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu lima",
-    "55",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu nem",
-    "56",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu pitu",
-    "57",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu walu",
-    "58",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulunggu siyaw",
-    "59",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Patpulu",
-    "60",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu isa",
-    "61",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu dwa",
-    "62",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu telu",
-    "63",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu pat",
-    "64",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu lima",
-    "65",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu nem",
-    "66",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu pitu",
-    "67",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu walu",
-    "68",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulunggu siyaw",
-    "69",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Limapulu",
-    "70",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu isa",
-    "71",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu dwa",
-    "72",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu telu",
-    "73",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu pat",
-    "74",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu lima",
-    "75",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu nem",
-    "76",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu pitu",
-    "77",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu walu",
-    "78",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulunggu siyaw",
-    "79",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Nempulu",
-    "80",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu isa",
-    "81",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu dwa",
-    "82",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu telu",
-    "83",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu pat",
-    "84",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu lima",
-    "85",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu nem",
-    "86",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu pitu",
-    "87",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu walu",
-    "88",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Walupulunggu siyaw",
-    "89",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Pitupulu",
-    "90",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu isa",
-    "91",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu dwa",
-    "92",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu telu",
-    "93",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu pat",
-    "94",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu lima",
-    "95",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu nem",
-    "96",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu pitu",
-    "97",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu walu",
-    "98",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulunggu siyaw",
-    "99",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Siyawpulu",
-    "100",
-    ""
-  ],
-  [
-    "Lesson 11: Numbers (1–100)",
-    "Magatus",
-    "100",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Walay",
-    "Bahay",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Pintu",
-    "Pinto",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Palyungan",
-    "Bintana",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Lamisan",
-    "Mesa",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Bagayanan",
-    "Silya",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Bangko",
-    "Bangko",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Katri",
-    "Kama",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Unan",
-    "Unan",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Manta",
-    "Kumot",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Palitan",
-    "Ilaw",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Baso",
-    "Baso",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Lampay",
-    "Plato",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Salidut / Salirut",
-    "Kutsara",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Tinidor",
-    "Tinidor",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Gelat",
-    "Kutsilyo",
-    ""
-  ],
-  [
-    "Lesson 12: Household Items",
-    "Panapu",
-    "Walis",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Balegkas",
-    "Damit / pang-itaas",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Pantalon",
-    "Pantalon",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Saya",
-    "Palda",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Talumpa",
-    "Sapatos",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Sinilas",
-    "Tsinelas",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Medyas",
-    "Medyas",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Sapiyu",
-    "Sombrero",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Musa / Musala",
-    "Panyo",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Sabitan",
-    "Sinturon",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Dyaket",
-    "Jacket",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Lilus",
-    "Relo",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Sising",
-    "Singsing",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Balig",
-    "Kuwintas",
-    ""
-  ],
-  [
-    "Lesson 13: Clothing",
-    "Tendung",
-    "Belo / Hijab / Headscarf",
-    ""
-  ]
+["Mga naunang salita (Lessons 1–4)","Uway","Oo","Yes"],
+["Mga naunang salita (Lessons 1–4)","Dikena","Hindi","No"],
+["Mga naunang salita (Lessons 1–4)","Madakel","Marami","Many"],
+["Mga naunang salita (Lessons 1–4)","Paydu / Pedu","Kaunti","Few"],
+["Mga naunang salita (Lessons 1–4)","Manisan","Maganda","Beautiful"],
+["Mga naunang salita (Lessons 1–4)","Pangit","Pangit","Ugly"],
+["Mga naunang salita (Lessons 1–4)","Masla","Malaki","Big"],
+["Mga naunang salita (Lessons 1–4)","Manot","Maliit","Small"],
+["Mga naunang salita (Lessons 1–4)","Gapya e ginawa nin","Masaya","Happy"],
+["Mga naunang salita (Lessons 1–4)","Malugkug","Malungkot","Sad"],
+["Mga naunang salita (Lessons 1–4)","Galinget","Galit","Angry"],
+["Mga naunang salita (Lessons 1–4)","Gagutem","Gutom","Hungry"],
+["Mga naunang salita (Lessons 1–4)","Nosug","Busog","Full"],
+["Mga naunang salita (Lessons 1–4)","Mapya e palangay nin","Mabait","Kind"],
+["Mga naunang salita (Lessons 1–4)","Mategel","Matalino","Intelligent"],
+["Mga naunang salita (Lessons 1–4)","Galugat","Pagod","Tired"],
+["Mga naunang salita (Lessons 1–4)","Malinis","Malinis","Clean"],
+["Mga naunang salita (Lessons 1–4)","Malzik","Marumi","Dirty"],
+["Mga naunang salita (Lessons 1–4)","Malengkas","Mabilis","Fast"],
+["Mga naunang salita (Lessons 1–4)","Malumbat","Mabagal","Slow"],
+["Mga naunang salita (Lessons 1–4)","Mayaw","Mainit","Hot"],
+["Mga naunang salita (Lessons 1–4)","Matenggaw","Malamig","Cold"],
+["Mga naunang salita (Lessons 1–4)","Mabagel","Malakas","Strong"],
+["Mga naunang salita (Lessons 1–4)","Malubay","Mahina","Weak"],
+
+["Lesson 5: Oras at Panahon","Mapita","Umaga","Morning"],
+["Lesson 5: Oras at Panahon","Modtu","Tanghali","Noon"],
+["Lesson 5: Oras at Panahon","Malulem","Hapon","Afternoon"],
+["Lesson 5: Oras at Panahon","Magabi","Gabi","Night"],
+["Lesson 5: Oras at Panahon","Kagay","Kahapon","Yesterday"],
+["Lesson 5: Oras at Panahon","Saguna","Ngayon","Today / Now"],
+["Lesson 5: Oras at Panahon","Namag","Bukas","Tomorrow"],
+["Lesson 5: Oras at Panahon","Amemay / Amay","Mamaya","Later"],
+["Lesson 5: Oras at Panahon","Kagina","Kanina","Earlier"],
+["Lesson 5: Oras at Panahon","Gay","Araw (day)","Day"],
+["Lesson 5: Oras at Panahon","Senang","Araw (sun)","Sun"],
+
+["Lesson 6: Mga Kasapi ng Pamilya","Ama","Ama","Father"],
+["Lesson 6: Mga Kasapi ng Pamilya","Ina","Ina","Mother"],
+["Lesson 6: Mga Kasapi ng Pamilya","Wata","Anak","Child / Offspring"],
+["Lesson 6: Mga Kasapi ng Pamilya","Wata","Bata","Child"],
+["Lesson 6: Mga Kasapi ng Pamilya","Kaka babay","Kuya","Older brother"],
+["Lesson 6: Mga Kasapi ng Pamilya","Kaka mama","Ate","Older sister"],
+["Lesson 6: Mga Kasapi ng Pamilya","Kaka","Tawag sa nakatatandang kapatid","Older sibling (form of address)"],
+["Lesson 6: Mga Kasapi ng Pamilya","Ali","Bunso / nakababatang kapatid","Younger sibling"],
+["Lesson 6: Mga Kasapi ng Pamilya","Ali sa langun","Pinakabunso","Youngest sibling"],
+["Lesson 6: Mga Kasapi ng Pamilya","Tuwa mama","Lolo","Grandfather"],
+["Lesson 6: Mga Kasapi ng Pamilya","Tuwa babay","Lola","Grandmother"],
+["Lesson 6: Mga Kasapi ng Pamilya","Tuwa","Tawag sa lolo o lola","Grandparent (form of address)"],
+["Lesson 6: Mga Kasapi ng Pamilya","Suled","Kapatid","Sibling"],
+["Lesson 6: Mga Kasapi ng Pamilya","Pamilya","Pamilya","Family"],
+
+["Lesson 7: Pagkain at Inumin","Emay / May","Kanin","Rice"],
+["Lesson 7: Pagkain at Inumin","Ig","Tubig","Water"],
+["Lesson 7: Pagkain at Inumin","Seda","Isda","Fish"],
+["Lesson 7: Pagkain at Inumin","Manuk","Manok","Chicken"],
+["Lesson 7: Pagkain at Inumin","Leman","Itlog","Egg"],
+["Lesson 7: Pagkain at Inumin","Kamu","Gulay","Vegetables"],
+["Lesson 7: Pagkain at Inumin","Gatas","Gatas","Milk"],
+["Lesson 7: Pagkain at Inumin","Pan","Tinapay","Bread"],
+["Lesson 7: Pagkain at Inumin","Timus","Asin","Salt"],
+["Lesson 7: Pagkain at Inumin","Mamis","Asukal","Sugar"],
+["Lesson 7: Pagkain at Inumin","Mamis","Matamis","Sweet"],
+["Lesson 7: Pagkain at Inumin","Kapi","Kape","Coffee"],
+["Lesson 7: Pagkain at Inumin","Saging","Saging","Banana"],
+["Lesson 7: Pagkain at Inumin","Mangga","Mangga","Mango"],
+
+["Lesson 8: Mga Hayop","Aso","Aso","Dog"],
+["Lesson 8: Mga Hayop","Puting","Pusa","Cat"],
+["Lesson 8: Mga Hayop","Sapi","Baka","Cow"],
+["Lesson 8: Mga Hayop","Kabaw / Kalabaw","Kalabaw","Carabao"],
+["Lesson 8: Mga Hayop","Kambing","Kambing","Goat"],
+["Lesson 8: Mga Hayop","Gembut","Baboy","Pig"],
+["Lesson 8: Mga Hayop","Papanuk","Ibon","Bird"],
+["Lesson 8: Mga Hayop","Manuk","Manok","Chicken"],
+["Lesson 8: Mga Hayop","Itik","Itik","Duck"],
+["Lesson 8: Mga Hayop","Dumpaw","Daga","Rat / Mouse"],
+["Lesson 8: Mga Hayop","Nipay","Ahas","Snake"],
+["Lesson 8: Mga Hayop","Ubal","Unggoy","Monkey"],
+["Lesson 8: Mga Hayop","Seda","Isda","Fish"],
+["Lesson 8: Mga Hayop","Kabayo","Kabayo","Horse"],
+["Lesson 8: Mga Hayop","Bilibili","Tupa","Sheep"],
+
+["Lesson 9: Mga Bahagi ng Katawan","Ulo","Ulo","Head"],
+["Lesson 9: Mga Bahagi ng Katawan","Buk","Buhok","Hair"],
+["Lesson 9: Mga Bahagi ng Katawan","Mata","Mata","Eye"],
+["Lesson 9: Mga Bahagi ng Katawan","Ngilong","Ilong","Nose"],
+["Lesson 9: Mga Bahagi ng Katawan","Bibil","Labi","Lip"],
+["Lesson 9: Mga Bahagi ng Katawan","Ngali","Bunganga","Mouth"],
+["Lesson 9: Mga Bahagi ng Katawan","Ngipen","Ngipin","Tooth / Teeth"],
+["Lesson 9: Mga Bahagi ng Katawan","Dila","Dila","Tongue"],
+["Lesson 9: Mga Bahagi ng Katawan","Tangila","Tainga","Ear"],
+["Lesson 9: Mga Bahagi ng Katawan","Beneng","Mukha","Face"],
+["Lesson 9: Mga Bahagi ng Katawan","Lima","Kamay","Hand"],
+["Lesson 9: Mga Bahagi ng Katawan","Kemel","Daliri","Finger"],
+["Lesson 9: Mga Bahagi ng Katawan","Ay","Paa","Foot"],
+["Lesson 9: Mga Bahagi ng Katawan","Aleb","Tuhod","Knee"],
+["Lesson 9: Mga Bahagi ng Katawan","Tyan","Tiyan","Stomach"],
+
+["Lesson 10: Mga Kulay","Maliga","Pula","Red"],
+["Lesson 10: Mga Kulay","Bilu","Asul","Blue"],
+["Lesson 10: Mga Kulay","Binaning","Dilaw","Yellow"],
+["Lesson 10: Mga Kulay","Gadung","Berde","Green"],
+["Lesson 10: Mga Kulay","Sikulati","Kayumanggi","Brown"],
+["Lesson 10: Mga Kulay","Maputi","Puti","White"],
+["Lesson 10: Mga Kulay","Metem","Itim","Black"],
+["Lesson 10: Mga Kulay","Kasumba","Rosas","Pink"],
+["Lesson 10: Mga Kulay","Magaw","Abo","Gray"],
+["Lesson 10: Mga Kulay","Lambayung","Lila","Purple"],
+["Lesson 10: Mga Kulay","Bulawan","Ginto","Gold"],
+["Lesson 10: Mga Kulay","Kulit","Kahel","Orange"],
+["Lesson 10: Mga Kulay","Pilak","Pilak","Silver"],
+["Lesson 10: Mga Kulay","Malibuteng","Madilim","Dark"],
+["Lesson 10: Mga Kulay","Malinawag","Maliwanag","Bright"],
+
+["Lesson 11: Mga Bilang","Isa","1","One"],
+["Lesson 11: Mga Bilang","Duwa","2","Two"],
+["Lesson 11: Mga Bilang","Telu","3","Three"],
+["Lesson 11: Mga Bilang","Pat","4","Four"],
+["Lesson 11: Mga Bilang","Lima","5","Five"],
+["Lesson 11: Mga Bilang","Nem","6","Six"],
+["Lesson 11: Mga Bilang","Pitu","7","Seven"],
+["Lesson 11: Mga Bilang","Walu","8","Eight"],
+["Lesson 11: Mga Bilang","Silaw","9","Nine"],
+["Lesson 11: Mga Bilang","Sapu","10","Ten"],
+["Lesson 11: Mga Bilang","Sapunggu isa","11","Eleven"],
+["Lesson 11: Mga Bilang","Sapunggu dwa","12","Twelve"],
+["Lesson 11: Mga Bilang","Dwapulu","20","Twenty"],
+["Lesson 11: Mga Bilang","Dwapulunggu isa","21","Twenty-one"],
+["Lesson 11: Mga Bilang","Dwapulunggu dwa","22","Twenty-two"],
+["Lesson 11: Mga Bilang","Dwapulunggu telu","23","Twenty-three"],
+["Lesson 11: Mga Bilang","Telupulu","30","Thirty"],
+["Lesson 11: Mga Bilang","Telupunggu isa","31","Thirty-one"],
+["Lesson 11: Mga Bilang","Telupunggu dwa","32","Thirty-two"],
+["Lesson 11: Mga Bilang","Telupunggu telu","33","Thirty-three"],
+["Lesson 11: Mga Bilang","Telupunggu pat","34","Thirty-four"],
+["Lesson 11: Mga Bilang","Patpulu","40","Forty"],
+["Lesson 11: Mga Bilang","Patpulunggu isa","41","Forty-one"],
+["Lesson 11: Mga Bilang","Patpulungu dwa","42","Forty-two"],
+["Lesson 11: Mga Bilang","Limapulu","50","Fifty"],
+["Lesson 11: Mga Bilang","Limapulunggu isa","51","Fifty-one"],
+["Lesson 11: Mga Bilang","Nempulu","60","Sixty"],
+["Lesson 11: Mga Bilang","Nempulunggu isa","61","Sixty-one"],
+["Lesson 11: Mga Bilang","Pitupulu","70","Seventy"],
+["Lesson 11: Mga Bilang","Pitupulunggu isa","71","Seventy-one"],
+["Lesson 11: Mga Bilang","Walupulu","80","Eighty"],
+["Lesson 11: Mga Bilang","Walupulunggu isa","81","Eighty-one"],
+["Lesson 11: Mga Bilang","Siyawpulu","90","Ninety"],
+["Lesson 11: Mga Bilang","Siyawpulunggu isa","91","Ninety-one"],
+["Lesson 11: Mga Bilang","Magatus","100","One hundred"],
+
+["Lesson 12: Mga Gamit sa Bahay","Walay","Bahay","House"],
+["Lesson 12: Mga Gamit sa Bahay","Pintu","Pinto","Door"],
+["Lesson 12: Mga Gamit sa Bahay","Palyungan","Bintana","Window"],
+["Lesson 12: Mga Gamit sa Bahay","Lamisan","Mesa","Table"],
+["Lesson 12: Mga Gamit sa Bahay","Bagayanan","Upuan","Chair"],
+["Lesson 12: Mga Gamit sa Bahay","Bangko","Bangko","Bench"],
+["Lesson 12: Mga Gamit sa Bahay","Katri","Kama","Bed"],
+["Lesson 12: Mga Gamit sa Bahay","Unan","Unan","Pillow"],
+["Lesson 12: Mga Gamit sa Bahay","Manta","Kumot","Blanket"],
+["Lesson 12: Mga Gamit sa Bahay","Palitan","Ilaw","Light"],
+["Lesson 12: Mga Gamit sa Bahay","Baso","Baso","Glass"],
+["Lesson 12: Mga Gamit sa Bahay","Lampay","Plato","Plate"],
+["Lesson 12: Mga Gamit sa Bahay","Salidut / Salirut","Kutsara","Spoon"],
+["Lesson 12: Mga Gamit sa Bahay","Tinidor","Tinidor","Fork"],
+["Lesson 12: Mga Gamit sa Bahay","Gelat","Kutsilyo","Knife"],
+["Lesson 12: Mga Gamit sa Bahay","Panapu","Walis","Broom"],
+
+["Lesson 13: Damit","Balegkas","Damit","Clothing"],
+["Lesson 13: Damit","Balegkas","Damit pang-itaas","Top / Upper garment"],
+["Lesson 13: Damit","Pantalon","Pantalon","Pants"],
+["Lesson 13: Damit","Saya","Palda","Skirt"],
+["Lesson 13: Damit","Talumpa","Sapatos","Shoes"],
+["Lesson 13: Damit","Sinilas","Tsinelas","Slippers"],
+["Lesson 13: Damit","Medyas","Medyas","Socks"],
+["Lesson 13: Damit","Sapiyu","Sombrero","Hat"],
+["Lesson 13: Damit","Musa / Musala","Panyo","Handkerchief"],
+["Lesson 13: Damit","Sabitan","Sinturon","Belt"],
+["Lesson 13: Damit","Dyaket","Dyaket","Jacket"],
+["Lesson 13: Damit","Lilus","Relo","Watch"],
+["Lesson 13: Damit","Sising","Singsing","Ring"],
+["Lesson 13: Damit","Balig","Kwintas","Necklace"],
+["Lesson 13: Damit","Tendung","Belo / Hijab","Headscarf / Hijab"]
 ].map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));
 
 const initialEntries=initial.map((x,i)=>({id:i+1,lesson:x[0],native:x[1],filipino:x[2],english:x[3]}));
