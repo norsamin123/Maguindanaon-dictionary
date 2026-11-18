@@ -1,4 +1,4 @@
-const CACHE_NAME = "maguindanaon-dictionary-v4";
+const CACHE_NAME = "maguindanaon-dictionary-v3";
 const APP_FILES = [
   "./",
   "./index.html",
